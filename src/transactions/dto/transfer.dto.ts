@@ -1,4 +1,6 @@
+import { Decimal } from "@prisma/client/runtime/library";
+
 export class TransferDto {
-  amount: number;
+  amount: Decimal;
   toAccountId: number;
 }

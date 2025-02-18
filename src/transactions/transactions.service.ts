@@ -6,6 +6,9 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { TransactionDto } from './dto/transaction.dto';
 import { CurrencyService } from 'src/currency/currency.service';
+import { Prisma } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class TransactionsService {
@@ -14,7 +17,7 @@ export class TransactionsService {
     private readonly currencyService: CurrencyService,
   ) {}
 
-  async deposit(dto: TransactionDto, accountId: number, userId: number) {
+  async contribution(dto: TransactionDto, accountId: number, userId: number) {
     const account = await this.prisma.account.findUnique({
       where: { id: accountId },
     });
@@ -28,7 +31,7 @@ export class TransactionsService {
       }),
       this.prisma.transaction.create({
         data: {
-          type: 'deposit',
+          type: 'contribution',
           amount: dto.amount,
           accountId: accountId,
           userId: userId,
@@ -62,8 +65,8 @@ export class TransactionsService {
     ]);
   }
 
-  async transferFunds(userId: number, toAccountId: number, amount: number) {
-    if (amount <= 0) {
+  async transferFunds(userId: number, toAccountId: number, amount: Decimal) {
+    if (amount.toNumber() <= 0) {
       throw new BadRequestException('Сума переказу має бути більшою за 0');
     }
 
@@ -83,24 +86,26 @@ export class TransactionsService {
       throw new BadRequestException('Недостатньо коштів для переказу');
     }
 
-    let finalAmount = amount;
+    let finalAmount = new Prisma.Decimal(amount);
 
     if (fromAccount.currency !== toAccount.currency) {
-      finalAmount = await this.currencyService.convertAmount(
-        amount,
-        fromAccount.currency,
-        toAccount.currency,
+      finalAmount = new Prisma.Decimal(
+        await this.currencyService.convertAmount(
+          amount,
+          fromAccount.currency,
+          toAccount.currency,
+        ),
       );
     }
 
     return this.prisma.$transaction([
       this.prisma.account.update({
         where: { id: fromAccount.id },
-        data: { balance: { decrement: amount } },
+        data: { balance: { decrement: +finalAmount } },
       }),
       this.prisma.account.update({
         where: { id: toAccount.id },
-        data: { balance: { increment: finalAmount } },
+        data: { balance: { increment: +finalAmount } },
       }),
       this.prisma.transaction.create({
         data: {
@@ -113,12 +118,97 @@ export class TransactionsService {
     ]);
   }
 
-  async getUserDeposits(userId: number) {
+  async getUserContribution(userId: number) {
     return this.prisma.transaction.findMany({
       where: {
         userId: userId,
-        type: 'deposit',
+        type: 'contribution',
       },
     });
+  }
+
+  async createDeposit(
+    userId: number,
+    amount: Decimal,
+    interest: number,
+    duration: number,
+  ) {
+    const account = await this.prisma.account.findFirst({
+      where: { userId: userId },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Рахунок не знайдено');
+    }
+
+    if (account.balance < amount) {
+      throw new BadRequestException(
+        'Недостатньо коштів для відкриття депозиту',
+      );
+    }
+
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + duration);
+
+    return this.prisma.$transaction([
+      this.prisma.account.update({
+        where: { id: account.id },
+        data: { balance: { decrement: amount } },
+      }),
+
+      this.prisma.deposit.create({
+        data: {
+          amount,
+          interest,
+          duration,
+          startDate: new Date(),
+          endDate,
+          userId,
+          accountId: account.id,
+        },
+      }),
+
+      this.prisma.transaction.create({
+        data: {
+          type: 'deposit_creation',
+          amount,
+          accountId: account.id,
+          userId,
+        },
+      }),
+    ]);
+  }
+
+  @Cron('0 0 * * *')
+  async checkMaturedDeposits() {
+    const today = new Date();
+
+    const maturedDeposits = await this.prisma.deposit.findMany({
+      where: { endDate: { lte: today } },
+    });
+
+    for (const deposit of maturedDeposits) {
+      const interestAmount = deposit.amount.mul(deposit.interest).div(100);
+
+      await this.prisma.$transaction([
+        this.prisma.account.update({
+          where: { id: deposit.accountId },
+          data: { balance: { increment: deposit.amount.add(interestAmount) } },
+        }),
+
+        this.prisma.deposit.delete({
+          where: { id: deposit.id },
+        }),
+
+        this.prisma.transaction.create({
+          data: {
+            type: 'deposit_interest',
+            amount: interestAmount,
+            accountId: deposit.accountId,
+            userId: deposit.userId,
+          },
+        }),
+      ]);
+    }
   }
 }

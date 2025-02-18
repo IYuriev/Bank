@@ -7,6 +7,7 @@ model User {
 
   accounts Account[]
   transactions Transaction[]
+  deposits Deposit[]
 
   createdAt    DateTime       @default(now()) @map("created_at")
 

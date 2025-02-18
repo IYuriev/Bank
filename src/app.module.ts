@@ -7,6 +7,8 @@ import { CookieModule } from './cookie/cookie.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { CurrencyModule } from './currency/currency.module';
 import { HttpModule } from '@nestjs/axios';
+import { ScheduleModule } from '@nestjs/schedule';
+import { DepositsModule } from './deposits/deposits.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { HttpModule } from '@nestjs/axios';
     TransactionsModule,
     CurrencyModule,
     HttpModule,
+    ScheduleModule.forRoot(),
+    DepositsModule,
   ],
   controllers: [],
   providers: [],

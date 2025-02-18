@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class CurrencyService {
@@ -22,10 +23,10 @@ export class CurrencyService {
   }
 
   async convertAmount(
-    amount: number,
+    amount: Decimal,
     fromCurrency: string,
     toCurrency: string,
-  ): Promise<number> {
+  ): Promise<Decimal> {
     if (fromCurrency === toCurrency) {
       return amount;
     }
@@ -35,6 +36,6 @@ export class CurrencyService {
         `Не вдалося знайти курс для ${fromCurrency} -> ${toCurrency}`,
       );
     }
-    return amount * rate;
+    return amount.mul(rate);
   }
 }

@@ -1,7 +1,9 @@
+import { Decimal } from '@prisma/client/runtime/library';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { CurrencyService } from 'src/currency/currency.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AccountsService {
@@ -46,10 +48,12 @@ export class AccountsService {
     let balance = account.balance;
 
     if (account.currency !== currency) {
-      balance = await this.currencyService.convertAmount(
-        balance,
-        account.currency,
-        currency,
+      balance = new Prisma.Decimal(
+        await this.currencyService.convertAmount(
+          balance,
+          account.currency,
+          currency,
+        ),
       );
     }
 
