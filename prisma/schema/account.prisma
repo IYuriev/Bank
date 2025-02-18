@@ -1,0 +1,13 @@
+model Account {
+  id           Int            @id @default(autoincrement())
+  currency     String
+  balance      Float          @default(0.0)
+
+  user         User           @relation(fields: [userId], references: [id])
+  userId       Int
+  transactions Transaction[]
+
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  @@map("accounts")
+}
