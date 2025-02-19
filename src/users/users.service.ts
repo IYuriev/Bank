@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
+import { TransactionType } from 'src/constants/enums/transactionType';
 
 @Injectable()
 export class UsersService {
@@ -39,7 +39,7 @@ export class UsersService {
     return this.prisma.transaction.findMany({
       where: {
         userId: userId,
-        type: 'contribution',
+        type: TransactionType.CONTRUBUTION,
       },
     });
   }
@@ -48,7 +48,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
-      throw new NotFoundException('Користувача не знайдено');
+      throw new NotFoundException('User not found');
     }
 
     await this.prisma.user.update({
@@ -63,7 +63,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
-      throw new NotFoundException('Користувача не знайдено');
+      throw new NotFoundException('User not found');
     }
 
     this.prisma.user.update({

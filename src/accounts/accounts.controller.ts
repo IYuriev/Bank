@@ -28,7 +28,7 @@ export class AccountsController {
     return this.accountsService.createAccount(createAccountDto, userId);
   }
 
-  @Delete('close/:id')
+  @Delete(':id/close')
   async deleteAccount(@Param('id') accountId: string, @Res() res: Response) {
     await this.accountsService.closeAccount(accountId);
     return res.send({ message: 'Deleted successfully' });

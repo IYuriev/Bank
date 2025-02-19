@@ -11,17 +11,6 @@ export class CurrencyService {
     this.apiUrl = String(process.env.EXCHANGE_RATES_API_URL);
   }
 
-  async getExchangeRate(
-    fromCurrency: string,
-    toCurrency: string,
-  ): Promise<number> {
-    const response = await lastValueFrom(
-      this.httpService.get(`${this.apiUrl}${fromCurrency}`),
-    );
-    const rates = response.data.rates;
-    return rates[toCurrency] || null;
-  }
-
   async convertAmount(
     amount: Decimal,
     fromCurrency: string,
@@ -33,9 +22,20 @@ export class CurrencyService {
     const rate = await this.getExchangeRate(fromCurrency, toCurrency);
     if (!rate) {
       throw new Error(
-        `Не вдалося знайти курс для ${fromCurrency} -> ${toCurrency}`,
+        `Could not find rate for ${fromCurrency} -> ${toCurrency}`,
       );
     }
     return amount.mul(rate);
+  }
+
+  private async getExchangeRate(
+    fromCurrency: string,
+    toCurrency: string,
+  ): Promise<number> {
+    const response = await lastValueFrom(
+      this.httpService.get(`${this.apiUrl}${fromCurrency}`),
+    );
+    const rates = response.data.rates;
+    return rates[toCurrency] || null;
   }
 }

@@ -1,5 +1,9 @@
-import { Decimal } from '@prisma/client/runtime/library';
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { CurrencyService } from 'src/currency/currency.service';
@@ -15,8 +19,19 @@ export class AccountsService {
   async createAccount(dto: CreateAccountDto, userId: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
-    if (!user) throw new NotFoundException('Користувача не знайдено');
-    if (user.isBlocked) throw new ForbiddenException('Ваш акаунт заблоковано');
+    if (!user) throw new NotFoundException('User not found');
+    if (user.isBlocked)
+      throw new ForbiddenException('Your account has been blocked');
+
+    const existingAccount = await this.prisma.account.findFirst({
+      where: { userId },
+    });
+
+    if (existingAccount) {
+      throw new BadRequestException(
+        'You already have an account. You cannot create another one',
+      );
+    }
 
     return this.prisma.account.create({
       data: {
@@ -36,32 +51,29 @@ export class AccountsService {
       where: { accountId: +accountId },
     });
 
-    await this.prisma.account.delete({ where: { id: +accountId } });
-
-    return;
+    return this.prisma.account.delete({ where: { id: +accountId } });
   }
 
   async getBalance(userId: number, currency: string) {
     const account = await this.prisma.account.findFirst({
-      where: { userId: userId },
+      where: { userId },
+      select: { balance: true, currency: true },
     });
 
     if (!account) {
-      throw new NotFoundException('Рахунок не знайдено');
+      throw new NotFoundException('Account not found');
     }
 
-    let balance = account.balance;
-
-    if (account.currency !== currency) {
-      balance = new Prisma.Decimal(
-        await this.currencyService.convertAmount(
-          balance,
-          account.currency,
-          currency,
-        ),
-      );
+    if (account.currency === currency.toUpperCase()) {
+      return { balance: account.balance, currency };
     }
 
-    return { balance, currency };
+    const convertedBalance = await this.currencyService.convertAmount(
+      account.balance,
+      account.currency,
+      currency,
+    );
+
+    return { balance: new Prisma.Decimal(convertedBalance), currency };
   }
 }

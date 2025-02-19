@@ -7,6 +7,8 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateDepositDto } from './dto/update-deposit.dto';
 import { CreateDepositDto } from './dto/create-deposit.dto';
+import { TransactionType } from 'src/constants/enums/transactionType';
+import { calculatePossibleDepositAmount } from 'src/utils/deposits/deposits';
 
 @Injectable()
 export class DepositsService {
@@ -19,13 +21,11 @@ export class DepositsService {
     });
 
     if (!account) {
-      throw new NotFoundException('Рахунок не знайдено');
+      throw new NotFoundException('Account not found');
     }
 
-    if (account.balance < amount) {
-      throw new BadRequestException(
-        'Недостатньо коштів для відкриття депозиту',
-      );
+    if (+account.balance < +amount) {
+      throw new BadRequestException('Insufficient funds to open a deposit');
     }
 
     const endDate = new Date();
@@ -51,7 +51,7 @@ export class DepositsService {
 
       this.prisma.transaction.create({
         data: {
-          type: 'deposit_creation',
+          type: TransactionType.DEPOSIT_CREATION,
           amount,
           accountId: account.id,
           userId,
@@ -64,37 +64,11 @@ export class DepositsService {
     const deposits = await this.prisma.deposit.findMany({
       where: { userId },
     });
-
     if (!deposits) {
       throw new NotFoundException('Deposits not found');
     }
 
-    const activeDeposits = deposits.filter(
-      (deposit) => deposit.endDate > new Date(),
-    );
-
-    if (activeDeposits.length === 0) {
-      throw new NotFoundException('No active deposits found');
-    }
-
-    const depositsWithPossibleAmount = await Promise.all(
-      activeDeposits.map(async (deposit) => {
-        if (deposit.endDate > new Date()) {
-          const { amount, interest } = deposit;
-
-          const interestAmount = amount.mul(interest).div(new Decimal(100));
-
-          return {
-            id: deposit.id,
-            amount: deposit.amount.toNumber(),
-            interestRate: deposit.interest,
-            possibleAmount: amount.add(interestAmount).toNumber(),
-          };
-        }
-      }),
-    );
-
-    return depositsWithPossibleAmount;
+    return calculatePossibleDepositAmount(deposits);
   }
 
   async changeInterest(depositId: number, dto: UpdateDepositDto) {

@@ -5,11 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { TransactionDto } from './dto/transaction.dto';
+import { TransactionDto } from './dto/create-transaction.dto';
 import { CurrencyService } from 'src/currency/currency.service';
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { Cron } from '@nestjs/schedule';
+import { TransactionType } from 'src/constants/enums/transactionType';
+import {
+  convertCurrency,
+  getAccounts,
+} from 'src/utils/transactions/transactions';
 
 @Injectable()
 export class TransactionsService {
@@ -21,8 +26,9 @@ export class TransactionsService {
   async contribution(dto: TransactionDto, accountId: number, userId: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
-    if (!user) throw new NotFoundException('Користувача не знайдено');
-    if (user.isBlocked) throw new ForbiddenException('Ваш акаунт заблоковано');
+    if (!user) throw new NotFoundException('User not found');
+    if (user.isBlocked)
+      throw new ForbiddenException('Your account has been blocked.');
 
     const account = await this.prisma.account.findUnique({
       where: { id: accountId },
@@ -37,7 +43,7 @@ export class TransactionsService {
       }),
       this.prisma.transaction.create({
         data: {
-          type: 'contribution',
+          type: TransactionType.CONTRUBUTION,
           amount: dto.amount,
           accountId: accountId,
           userId: userId,
@@ -48,9 +54,9 @@ export class TransactionsService {
 
   async withdraw(dto: TransactionDto, id: number, userId: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-
-    if (!user) throw new NotFoundException('Користувача не знайдено');
-    if (user.isBlocked) throw new ForbiddenException('Ваш акаунт заблоковано');
+    if (!user) throw new NotFoundException('User not found');
+    if (user.isBlocked)
+      throw new ForbiddenException('Your account has been blocked');
 
     const account = await this.prisma.account.findUnique({
       where: { id: id },
@@ -67,7 +73,7 @@ export class TransactionsService {
       }),
       this.prisma.transaction.create({
         data: {
-          type: 'withdraw',
+          type: TransactionType.WITHDRAW,
           amount: dto.amount,
           accountId: id,
           userId: userId,
@@ -77,50 +83,41 @@ export class TransactionsService {
   }
 
   async transferFunds(userId: number, toAccountId: number, amount: Decimal) {
-    if (amount.toNumber() <= 0) {
-      throw new BadRequestException('Сума переказу має бути більшою за 0');
-    }
-
-    const fromAccount = await this.prisma.account.findFirst({
-      where: { userId: userId },
-    });
-
-    const toAccount = await this.prisma.account.findUnique({
-      where: { id: toAccountId },
-    });
-
-    if (!fromAccount || !toAccount) {
-      throw new NotFoundException('Один із рахунків не знайдено');
-    }
-
-    if (fromAccount.balance < amount) {
-      throw new BadRequestException('Недостатньо коштів для переказу');
-    }
-
-    let finalAmount = new Prisma.Decimal(amount);
-
-    if (fromAccount.currency !== toAccount.currency) {
-      finalAmount = new Prisma.Decimal(
-        await this.currencyService.convertAmount(
-          amount,
-          fromAccount.currency,
-          toAccount.currency,
-        ),
+    if (amount.lte(0)) {
+      throw new BadRequestException(
+        'The transfer amount must be greater than 0',
       );
     }
+
+    const { fromAccount, toAccount } = await getAccounts(
+      this.prisma,
+      userId,
+      toAccountId,
+    );
+
+    if (fromAccount.balance.lt(amount)) {
+      throw new BadRequestException('Insufficient funds for transfer');
+    }
+
+    const finalAmount = await convertCurrency(
+      this.currencyService,
+      fromAccount,
+      toAccount,
+      amount,
+    );
 
     return this.prisma.$transaction([
       this.prisma.account.update({
         where: { id: fromAccount.id },
-        data: { balance: { decrement: +finalAmount } },
+        data: { balance: { decrement: finalAmount } },
       }),
       this.prisma.account.update({
         where: { id: toAccount.id },
-        data: { balance: { increment: +finalAmount } },
+        data: { balance: { increment: finalAmount } },
       }),
       this.prisma.transaction.create({
         data: {
-          type: 'transfer',
+          type: TransactionType.TRANSFER,
           amount,
           accountId: toAccount.id,
           userId: fromAccount.userId,
@@ -133,7 +130,7 @@ export class TransactionsService {
     return this.prisma.transaction.findMany({
       where: {
         userId: userId,
-        type: 'contribution',
+        type: TransactionType.CONTRUBUTION,
       },
     });
   }
@@ -161,7 +158,7 @@ export class TransactionsService {
 
         this.prisma.transaction.create({
           data: {
-            type: 'deposit_interest',
+            type: TransactionType.DEPOSIT_INTEREST,
             amount: interestAmount,
             accountId: deposit.accountId,
             userId: deposit.userId,

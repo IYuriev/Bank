@@ -19,16 +19,12 @@ import { CreateDepositDto } from './dto/create-deposit.dto';
 export class DepositsController {
   constructor(private readonly depositService: DepositsService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Post('create')
   async createDeposit(
     @GetUser() userId: number,
     @Body() dto: CreateDepositDto,
   ) {
-    return this.depositService.createDeposit(
-      userId,
-      dto
-    );
+    return this.depositService.createDeposit(userId, dto);
   }
 
   @Get('possible-amount')
@@ -36,9 +32,9 @@ export class DepositsController {
     return await this.depositService.calculateDepositWithInterest(userId);
   }
 
-  @Patch('interest/:id')
-  @UseGuards(JwtAuthGuard, AdminGuard)
-  changUserInterest(
+  @Patch(':id/interest')
+  @UseGuards(AdminGuard)
+  changeUserInterest(
     @Param('id') userId: string,
     @Body() dto: UpdateDepositDto,
   ) {

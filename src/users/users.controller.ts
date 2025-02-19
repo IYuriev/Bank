@@ -14,7 +14,6 @@ import { CookieService } from 'src/cookie/cookie.service';
 import { Response } from 'express';
 import { AdminGuard } from 'src/auth/guards/admin.guard';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { Decimal } from '@prisma/client/runtime/library';
 
 @Controller('users')
 export class UsersController {
@@ -36,7 +35,7 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  @Get('history/:id')
+  @Get(':id/history')
   @UseGuards(JwtAuthGuard, AdminGuard)
   getcCnontributionHistory(@Param('id') userId: string) {
     return this.usersService.getHistory(+userId);
