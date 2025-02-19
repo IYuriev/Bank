@@ -1,9 +1,10 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { TransactionDto } from './dto/create-transaction.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { GetUser } from 'src/decorators/get-user.decorator';
+import { JwtAuthGuard } from 'src/common/guards/auth/jwt-auth.guard';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { TransferDto } from './dto/create-transfer.dto';
+import { AccountOwnerGuard } from 'src/common/guards/account/account.guard';
 
 @Controller('transactions')
 @UseGuards(JwtAuthGuard)
@@ -20,6 +21,7 @@ export class TransactionsController {
   }
 
   @Post(':id/withdraw')
+  @UseGuards(AccountOwnerGuard)
   async withdraw(
     @Body() dto: TransactionDto,
     @Param('id') accountId: string,

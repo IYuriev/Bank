@@ -8,9 +8,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { DepositsService } from './deposits.service';
-import { GetUser } from 'src/decorators/get-user.decorator';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { AdminGuard } from 'src/auth/guards/admin.guard';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { JwtAuthGuard } from 'src/common/guards/auth/jwt-auth.guard';
+import { AdminGuard } from 'src/common/guards/admin/admin.guard';
 import { UpdateDepositDto } from './dto/update-deposit.dto';
 import { CreateDepositDto } from './dto/create-deposit.dto';
 

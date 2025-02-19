@@ -12,8 +12,8 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CookieService } from 'src/cookie/cookie.service';
 import { Response } from 'express';
-import { AdminGuard } from 'src/auth/guards/admin.guard';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { AdminGuard } from 'src/common/guards/admin/admin.guard';
+import { JwtAuthGuard } from 'src/common/guards/auth/jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {

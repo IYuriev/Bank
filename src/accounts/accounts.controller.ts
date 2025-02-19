@@ -12,8 +12,9 @@ import {
 import { Response } from 'express';
 import { AccountsService } from './accounts.service';
 import { CreateAccountDto } from './dto/create-account.dto';
-import { GetUser } from 'src/decorators/get-user.decorator';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { GetUser } from 'src/common/decorators/get-user.decorator';
+import { JwtAuthGuard } from 'src/common/guards/auth/jwt-auth.guard';
+import { AccountOwnerGuard } from 'src/common/guards/account/account.guard';
 
 @Controller('accounts')
 @UseGuards(JwtAuthGuard)
@@ -29,12 +30,14 @@ export class AccountsController {
   }
 
   @Delete(':id/close')
+  @UseGuards(AccountOwnerGuard)
   async deleteAccount(@Param('id') accountId: string, @Res() res: Response) {
     await this.accountsService.closeAccount(accountId);
     return res.send({ message: 'Deleted successfully' });
   }
 
   @Get('balance')
+  @UseGuards(AccountOwnerGuard)
   async getBalance(
     @Query('currency') currency: string,
     @GetUser() userId: number,
