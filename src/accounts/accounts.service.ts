@@ -1,5 +1,5 @@
 import { Decimal } from '@prisma/client/runtime/library';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { CurrencyService } from 'src/currency/currency.service';
@@ -13,6 +13,11 @@ export class AccountsService {
   ) {}
 
   async createAccount(dto: CreateAccountDto, userId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) throw new NotFoundException('Користувача не знайдено');
+    if (user.isBlocked) throw new ForbiddenException('Ваш акаунт заблоковано');
+
     return this.prisma.account.create({
       data: {
         currency: dto.currency.toUpperCase(),

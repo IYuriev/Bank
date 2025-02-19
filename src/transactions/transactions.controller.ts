@@ -38,18 +38,4 @@ export class TransactionsController {
   async getUserContributions(@GetUser() userId: number) {
     return this.transactionsService.getUserContribution(userId);
   }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('deposit')
-  async createDeposit(
-    @GetUser() userId: number,
-    @Body() { amount, interest, duration },
-  ) {
-    return this.transactionsService.createDeposit(
-      userId,
-      amount,
-      interest,
-      duration,
-    );
-  }
 }

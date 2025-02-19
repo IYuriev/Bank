@@ -1,7 +1,7 @@
 model Deposit {
   id          Int      @id @default(autoincrement())
   amount      Decimal
-  interest    Float   
+  interest    Decimal   
   duration    Int     
   startDate   DateTime @default(now())
   endDate     DateTime

@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class UsersService {
@@ -31,5 +33,42 @@ export class UsersService {
 
   async findAll() {
     return this.prisma.user.findMany();
+  }
+
+  async getHistory(userId: number) {
+    return this.prisma.transaction.findMany({
+      where: {
+        userId: userId,
+        type: 'contribution',
+      },
+    });
+  }
+
+  async blockUser(userId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException('Користувача не знайдено');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isBlocked: true },
+    });
+
+    return user;
+  }
+
+  async unblockUser(userId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException('Користувача не знайдено');
+    }
+
+    this.prisma.user.update({
+      where: { id: userId },
+      data: { isBlocked: false },
+    });
   }
 }

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -18,6 +19,11 @@ export class TransactionsService {
   ) {}
 
   async contribution(dto: TransactionDto, accountId: number, userId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) throw new NotFoundException('Користувача не знайдено');
+    if (user.isBlocked) throw new ForbiddenException('Ваш акаунт заблоковано');
+
     const account = await this.prisma.account.findUnique({
       where: { id: accountId },
     });
@@ -41,12 +47,17 @@ export class TransactionsService {
   }
 
   async withdraw(dto: TransactionDto, id: number, userId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) throw new NotFoundException('Користувача не знайдено');
+    if (user.isBlocked) throw new ForbiddenException('Ваш акаунт заблоковано');
+
     const account = await this.prisma.account.findUnique({
       where: { id: id },
     });
 
     if (!account) throw new NotFoundException('Account not found');
-    if (account.balance < dto.amount)
+    if (+account.balance < +dto.amount)
       throw new BadRequestException('Insufficient funds');
 
     return this.prisma.$transaction([
@@ -125,58 +136,6 @@ export class TransactionsService {
         type: 'contribution',
       },
     });
-  }
-
-  async createDeposit(
-    userId: number,
-    amount: Decimal,
-    interest: number,
-    duration: number,
-  ) {
-    const account = await this.prisma.account.findFirst({
-      where: { userId: userId },
-    });
-
-    if (!account) {
-      throw new NotFoundException('Рахунок не знайдено');
-    }
-
-    if (account.balance < amount) {
-      throw new BadRequestException(
-        'Недостатньо коштів для відкриття депозиту',
-      );
-    }
-
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + duration);
-
-    return this.prisma.$transaction([
-      this.prisma.account.update({
-        where: { id: account.id },
-        data: { balance: { decrement: amount } },
-      }),
-
-      this.prisma.deposit.create({
-        data: {
-          amount,
-          interest,
-          duration,
-          startDate: new Date(),
-          endDate,
-          userId,
-          accountId: account.id,
-        },
-      }),
-
-      this.prisma.transaction.create({
-        data: {
-          type: 'deposit_creation',
-          amount,
-          accountId: account.id,
-          userId,
-        },
-      }),
-    ]);
   }
 
   @Cron('0 0 * * *')
