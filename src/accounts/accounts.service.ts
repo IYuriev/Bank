@@ -54,10 +54,9 @@ export class AccountsService {
     return this.prisma.account.delete({ where: { id: +accountId } });
   }
 
-  async getBalance(userId: number, currency: string) {
-    const account = await this.prisma.account.findFirst({
-      where: { userId },
-      select: { balance: true, currency: true },
+  async getBalance(accountId: string, currency: string) {
+    const account = await this.prisma.account.findUnique({
+      where: { id: +accountId },
     });
 
     if (!account) {
@@ -71,7 +70,7 @@ export class AccountsService {
     const convertedBalance = await this.currencyService.convertAmount(
       account.balance,
       account.currency,
-      currency,
+      currency.toUpperCase(),
     );
 
     return { balance: new Prisma.Decimal(convertedBalance), currency };

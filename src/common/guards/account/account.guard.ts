@@ -23,7 +23,7 @@ export class AccountOwnerGuard implements CanActivate {
     if (!account) {
       throw new NotFoundException('Account not found');
     }
-    if (account.userId !== user.id) {
+    if (account.userId !== user.user_id) {
       throw new ForbiddenException('You do not own this account');
     }
 

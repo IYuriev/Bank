@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { TransactionDto } from './dto/create-transaction.dto';
 import { CurrencyService } from 'src/currency/currency.service';
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -15,6 +14,8 @@ import {
   convertCurrency,
   getAccounts,
 } from 'src/utils/transactions/transactions';
+import { TransactionDto } from './dto/transaction.dto';
+import { TransferDto } from './dto/create-transfer.dto';
 
 @Injectable()
 export class TransactionsService {
@@ -82,20 +83,15 @@ export class TransactionsService {
     ]);
   }
 
-  async transferFunds(userId: number, toAccountId: number, amount: Decimal) {
-    if (amount.lte(0)) {
-      throw new BadRequestException(
-        'The transfer amount must be greater than 0',
-      );
-    }
-
+  async transferFunds(userId: number, dto: TransferDto) {
     const { fromAccount, toAccount } = await getAccounts(
       this.prisma,
       userId,
-      toAccountId,
+      dto.toAccountId,
     );
+    const decimalAmount = new Decimal(dto.amount);
 
-    if (fromAccount.balance.lt(amount)) {
+    if (fromAccount.balance.lt(decimalAmount)) {
       throw new BadRequestException('Insufficient funds for transfer');
     }
 
@@ -103,13 +99,13 @@ export class TransactionsService {
       this.currencyService,
       fromAccount,
       toAccount,
-      amount,
+      decimalAmount,
     );
 
     return this.prisma.$transaction([
       this.prisma.account.update({
         where: { id: fromAccount.id },
-        data: { balance: { decrement: finalAmount } },
+        data: { balance: { decrement: decimalAmount } },
       }),
       this.prisma.account.update({
         where: { id: toAccount.id },
@@ -118,7 +114,7 @@ export class TransactionsService {
       this.prisma.transaction.create({
         data: {
           type: TransactionType.TRANSFER,
-          amount,
+          amount: finalAmount,
           accountId: toAccount.id,
           userId: fromAccount.userId,
         },

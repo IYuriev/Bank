@@ -43,13 +43,15 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard, AdminGuard)
   @Patch(':id/block')
-  async blockUser(@Param('id') userId: string) {
-    return this.usersService.blockUser(+userId);
+  async blockUser(@Param('id') userId: string, @Res() res: Response) {
+    this.usersService.blockUser(+userId);
+    return res.send({ message: 'User was blocked successfully' });
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)
   @Patch(':id/unblock')
-  async unblockUser(@Param('id') userId: string) {
-    return this.usersService.unblockUser(+userId);
+  async unblockUser(@Param('id') userId: string, @Res() res: Response) {
+    this.usersService.unblockUser(+userId);
+    return res.send({ message: 'User was unblocked successfully' });
   }
 }

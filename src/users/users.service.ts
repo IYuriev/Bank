@@ -55,8 +55,6 @@ export class UsersService {
       where: { id: userId },
       data: { isBlocked: true },
     });
-
-    return user;
   }
 
   async unblockUser(userId: number) {
@@ -66,7 +64,7 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    this.prisma.user.update({
+    await this.prisma.user.update({
       where: { id: userId },
       data: { isBlocked: false },
     });

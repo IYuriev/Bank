@@ -1,30 +1,31 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
-import { TransactionDto } from './dto/create-transaction.dto';
+
 import { JwtAuthGuard } from 'src/common/guards/auth/jwt-auth.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { TransferDto } from './dto/create-transfer.dto';
 import { AccountOwnerGuard } from 'src/common/guards/account/account.guard';
+import { TransactionDto } from './dto/transaction.dto';
 
 @Controller('transactions')
 @UseGuards(JwtAuthGuard)
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
-  @Post(':id/contribution')
+  @Post(':accountId/contribution')
   async contribution(
     @Body() dto: TransactionDto,
-    @Param('id') accountId: string,
+    @Param('accountId') accountId: string,
     @GetUser() userId: number,
   ) {
     return this.transactionsService.contribution(dto, +accountId, userId);
   }
 
-  @Post(':id/withdraw')
+  @Post(':accountId/withdraw')
   @UseGuards(AccountOwnerGuard)
   async withdraw(
     @Body() dto: TransactionDto,
-    @Param('id') accountId: string,
+    @Param('accountId') accountId: string,
     @GetUser() userId: number,
   ) {
     return this.transactionsService.withdraw(dto, +accountId, userId);
@@ -32,8 +33,7 @@ export class TransactionsController {
 
   @Post('transfer')
   async transferFunds(@Body() dto: TransferDto, @GetUser() userId: number) {
-    const { toAccountId, amount } = dto;
-    return this.transactionsService.transferFunds(userId, toAccountId, amount);
+    return this.transactionsService.transferFunds(userId, dto);
   }
 
   @Get('contributions')

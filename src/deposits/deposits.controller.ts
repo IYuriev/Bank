@@ -39,5 +39,5 @@ export class DepositsController {
     @Body() dto: UpdateDepositDto,
   ) {
     return this.depositService.changeInterest(+userId, dto);
-  }
+  } 
 }

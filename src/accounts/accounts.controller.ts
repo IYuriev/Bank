@@ -29,19 +29,19 @@ export class AccountsController {
     return this.accountsService.createAccount(createAccountDto, userId);
   }
 
-  @Delete(':id/close')
+  @Delete(':accountId/close')
   @UseGuards(AccountOwnerGuard)
-  async deleteAccount(@Param('id') accountId: string, @Res() res: Response) {
+  async deleteAccount(@Param('accountId') accountId: string, @Res() res: Response) {
     await this.accountsService.closeAccount(accountId);
     return res.send({ message: 'Deleted successfully' });
   }
 
-  @Get('balance')
+  @Get(':accountId/balance')
   @UseGuards(AccountOwnerGuard)
   async getBalance(
     @Query('currency') currency: string,
-    @GetUser() userId: number,
+    @Param('accountId') accountId: string,
   ) {
-    return this.accountsService.getBalance(userId, currency);
+    return this.accountsService.getBalance(accountId, currency);
   }
 }
