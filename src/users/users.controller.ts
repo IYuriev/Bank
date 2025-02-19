@@ -14,7 +14,11 @@ import { CookieService } from 'src/cookie/cookie.service';
 import { Response } from 'express';
 import { AdminGuard } from 'src/common/guards/admin/admin.guard';
 import { JwtAuthGuard } from 'src/common/guards/auth/jwt-auth.guard';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiDocFor } from 'src/common/decorators/api-doc.decorator';
+import { USER_CONTROLLER_DOCS } from 'src/constants/docs/users/user.controller';
 
+@ApiTags('Users')
 @Controller('users')
 export class UsersController {
   constructor(
@@ -23,6 +27,7 @@ export class UsersController {
   ) {}
 
   @Post('registration')
+  @ApiDocFor(USER_CONTROLLER_DOCS.registration)
   async create(@Body() createUserDto: CreateUserDto, @Res() res: Response) {
     const token = await this.usersService.create(createUserDto);
     this.cookieService.setUserCookie(res, token);
@@ -30,19 +35,22 @@ export class UsersController {
   }
 
   @Get()
+  @ApiDocFor(USER_CONTROLLER_DOCS.getAllUsers)
   @UseGuards(JwtAuthGuard, AdminGuard)
   getAllUsers() {
     return this.usersService.findAll();
   }
 
   @Get(':id/history')
+  @ApiDocFor(USER_CONTROLLER_DOCS.getContributionHistory)
   @UseGuards(JwtAuthGuard, AdminGuard)
-  getcCnontributionHistory(@Param('id') userId: string) {
+  getContributionHistory(@Param('id') userId: string) {
     return this.usersService.getHistory(+userId);
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)
   @Patch(':id/block')
+  @ApiDocFor(USER_CONTROLLER_DOCS.blockUser)
   async blockUser(@Param('id') userId: string, @Res() res: Response) {
     this.usersService.blockUser(+userId);
     return res.send({ message: 'User was blocked successfully' });
@@ -50,6 +58,7 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard, AdminGuard)
   @Patch(':id/unblock')
+  @ApiDocFor(USER_CONTROLLER_DOCS.unblockUser)
   async unblockUser(@Param('id') userId: string, @Res() res: Response) {
     this.usersService.unblockUser(+userId);
     return res.send({ message: 'User was unblocked successfully' });
