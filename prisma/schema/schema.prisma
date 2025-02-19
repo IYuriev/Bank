@@ -7,3 +7,73 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+
+model User {
+  id           Int            @default(autoincrement()) @id
+  email        String         @unique
+  password     String
+  role         String         @default("USER")
+  isBlocked    Boolean        @default(false)
+
+  accounts Account[]
+  transactions Transaction[]
+  deposits Deposit[]
+
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Transaction {
+  id          Int            @id @default(autoincrement())
+  type        String 
+  amount      Decimal
+
+  accountId   Int
+  account     Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id])
+  userId      Int
+
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  @@map("transactions")
+}
+
+model Deposit {
+  id          Int      @id @default(autoincrement())
+  amount      Decimal
+  interest    Decimal   
+  duration    Int     
+  startDate   DateTime @default(now())
+  endDate     DateTime
+  userId      Int
+  accountId   Int
+
+  user        User      @relation(fields: [userId], references: [id])
+  account     Account   @relation(fields: [accountId], references: [id])
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("deposits")
+}
+
+model Account {
+  id           Int            @id @default(autoincrement())
+  currency     String
+  balance      Decimal          @default(0.00)
+
+  user         User           @relation(fields: [userId], references: [id])
+  userId       Int
+  transactions Transaction[]
+  deposits Deposit[]
+
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  @@map("accounts")
+}

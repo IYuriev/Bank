@@ -4,6 +4,7 @@ import * as cookieParser from 'cookie-parser';
 import 'dotenv/config';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { Swagger } from './constants/enums/swagger';
 
 async function bootstrap() {
   try {
@@ -20,14 +21,14 @@ async function bootstrap() {
     );
 
     app.enableCors({
-      origin: `http://localhost:${port}`,
+      origin: '*',
       credentials: true,
     });
 
     const config = new DocumentBuilder()
-      .setTitle('Bank API')
-      .setDescription('API for managing user accounts and transactions')
-      .setVersion('1.0')
+      .setTitle(Swagger.TITLE)
+      .setDescription(Swagger.DESCRIPTION)
+      .setVersion(Swagger.VERSION)
       .addBearerAuth()
       .build();
 
